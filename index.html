@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quản lý Nhóm chức năng 2</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: Arial, sans-serif;
+    display: flex; height: 100vh;
+  }
+  nav {
+    width: 220px;
+    background: #2c3e50;
+    color: white;
+    padding: 20px;
+  }
+  nav h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+  nav button {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: white;
+    padding: 10px;
+    text-align: left;
+    cursor: pointer;
+    margin-bottom: 5px;
+  }
+  nav button:hover, nav button.active {
+    background: #34495e;
+  }
+  main {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #ecf0f1;
+  }
+  section {
+    display: none;
+  }
+  section.active {
+    display: block;
+  }
+  form input, form select, form button, form textarea {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: white;
+  }
+  table, th, td {
+    border: 1px solid #ccc;
+  }
+  th, td {
+    padding: 8px;
+    text-align: left;
+  }
+  .action-buttons button {
+    margin-right: 5px;
+  }
+  .search-input {
+    margin: 10px 0;
+    padding: 8px;
+    width: 100%;
+  }
+</style>
+<!-- Firebase libs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<nav>
+  <h2>Nhóm chức năng 2</h2>
+  <button id="btnCourses" class="active" onclick="showSection('courses')">Học phần</button>
+  <button id="btnSemesters" onclick="showSection('semesters')">Kì học</button>
+  <button id="btnClasses" onclick="showSection('classes')">Lớp học phần</button>
+  <button id="btnAssignments" onclick="showSection('assignments')">Phân công giảng viên</button>
+  <button id="btnStats" onclick="showSection('stats')">Thống kê</button>
+</nav>
+
+<main>
+  <!-- UC2.1: Quản lý Học phần -->
+  <section id="courses" class="active">
+    <h2>Học phần</h2>
+    <input type="text" id="searchCourses" class="search-input" placeholder="Tìm kiếm học phần theo mã hoặc tên..." oninput="renderCourses()" />
+    <form id="formCourse">
+      <input type="text" id="courseCode" placeholder="Mã số học phần" required />
+      <input type="text" id="courseName" placeholder="Tên học phần" required />
+      <input type="number" id="courseCredits" placeholder="Số tín chỉ" min="0" required />
+      <input type="number" step="0.1" id="courseCoefficient" placeholder="Hệ số học phần" min="0" required />
+      <input type="number" id="courseHours" placeholder="Số tiết" min="0" required />
+      <button type="submit" id="courseSubmitBtn">Thêm học phần</button>
+    </form>
+    <table>
+      <thead>
+        <tr><th>Mã số</th><th>Tên học phần</th><th>Tín chỉ</th><th>Hệ số</th><th>Số tiết</th><th>Hành động</th></tr>
+      </thead>
+      <tbody id="courseTable"></tbody>
+    </table>
+  </section>
+
+  <!-- UC2.2: Quản lý Kì học -->
+  <section id="semesters">
+    <h2>Kì học</h2>
+    <input type="text" id="searchSemesters" class="search-input" placeholder="Tìm kiếm kì học theo tên hoặc năm học..." oninput="renderSemesters()" />
+    <form id="formSemester">
+      <input type="text" id="semesterName" placeholder="Tên kì học (VD: Kì 1)" required />
+      <input type="text" id="schoolYear" placeholder="Năm học (VD: 2024-2025)" pattern="\\d{4}-\\d{4}" title="Ví dụ: 2024-2025" required />
+      <input type="date" id="startDate" placeholder="Ngày bắt đầu" required />
+      <input type="date" id="endDate" placeholder="Ngày kết thúc" required />
+      <button type="submit" id="semesterSubmitBtn">Thêm kì học</button>
+    </form>
+    <table>
+      <thead>
+        <tr><th>Tên kì</th><th>Năm học</th><th>Bắt đầu</th><th>Kết thúc</th><th>Hành động</th></tr>
+      </thead>
+      <tbody id="semesterTable"></tbody>
+    </table>
+  </section>
+
+  <!-- UC2.3: Quản lý Lớp học phần -->
+  <section id="classes">
+    <h2>Lớp học phần</h2>
+    <input type="text" id="searchClasses" class="search-input" placeholder="Tìm kiếm lớp học phần theo mã lớp hoặc tên lớp..." oninput="renderClasses()" />
+    <form id="formClass">
+      <select id="classSemester" required><option value="">-- Chọn Kì học --</option></select>
+      <select id="classCourse" required><option value="">-- Chọn Học phần --</option></select>
+      <input type="text" id="classCode" placeholder="Mã lớp học phần" required />
+      <input type="text" id="className" placeholder="Tên lớp học phần" required />
+      <input type="number" id="classStudentCount" placeholder="Số sinh viên" min="0" required />
+      <button type="submit" id="classSubmitBtn">Thêm lớp học phần</button>
+    </form>
+    <table>
+      <thead>
+        <tr><th>Kì học</th><th>Học phần</th><th>Mã lớp</th><th>Tên lớp</th><th>Số SV</th><th>Hành động</th></tr>
+      </thead>
+      <tbody id="classTable"></tbody>
+    </table>
+  </section>
+
+  <!-- UC2.4: Phân công giảng viên -->
+  <section id="assignments">
+    <h2>Phân công giảng viên</h2>
+    <input type="text" id="searchAssignments" class="search-input" placeholder="Tìm kiếm theo mã lớp, mã giảng viên hoặc tên giảng viên..." oninput="renderAssignments()" />
+    <form id="formAssignment">
+      <select id="assignClass" required><option value="">-- Chọn Lớp học phần --</option></select>
+      <select id="assignTeacher" required><option value="">-- Chọn Giảng viên --</option></select>
+      <button type="submit" id="assignSubmitBtn">Thêm phân công</button>
+    </form>
+    <table>
+      <thead>
+        <tr><th>Mã lớp</th><th>Tên lớp</th><th>Mã GV</th><th>Tên GV</th><th>Hành động</th></tr>
+      </thead>
+      <tbody id="assignmentTable"></tbody>
+    </table>
+  </section>
+
+  <!-- UC2.5: Thống kê số lớp mở cho các học phần trong năm học -->
+  <section id="stats">
+    <h2>Thống kê số lớp mở theo học phần trong năm học</h2>
+    <select id="statYear" onchange="renderStats()">
+      <option value="">-- Chọn năm học --</option>
+    </select>
+    <table>
+      <thead>
+        <tr><th>Năm học</th><th>Học phần</th><th>Số lớp mở</th></tr>
+      </thead>
+      <tbody id="statTable"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAl2el3bawxqQOxXb1aKIWvNktvNhFNGZU",
+    authDomain: "teacher-management-469eb.firebaseapp.com",
+    projectId: "teacher-management-469eb",
+    storageBucket: "teacher-management-469eb.appspot.com",
+    messagingSenderId: "765155754198",
+    appId: "1:765155754198:web:59fbeacd6fcf49e3efc977",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // Show/hide sections and active menu button
+  function showSection(id) {
+    document.querySelectorAll('main section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btn' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('active');
+  }
+
+  // State edit ids
+  let editCourseId = null;
+  let editSemesterId = null;
+  let editClassId = null;
+  let editAssignmentId = null;
+
+  // --- UC2.1: Học phần ---
+  const formCourse = document.getElementById('formCourse');
+  const courseTable = document.getElementById('courseTable');
+  const searchCourses = document.getElementById('searchCourses');
+
+  formCourse.onsubmit = async e => {
+    e.preventDefault();
+    const data = {
+      code: document.getElementById('courseCode').value.trim(),
+      name: document.getElementById('courseName').value.trim(),
+      credits: Number(document.getElementById('courseCredits').value),
+      coefficient: Number(document.getElementById('courseCoefficient').value),
+      hours: Number(document.getElementById('courseHours').value),
+    };
+    if (!data.code || !data.name) {
+      alert('Mã và tên học phần không được để trống');
+      return;
+    }
+
+    try {
+      if(editCourseId) {
+        await db.collection('courses').doc(editCourseId).set(data);
+        editCourseId = null;
+        formCourse.querySelector('button').textContent = 'Thêm học phần';
+      } else {
+        // Kiểm tra tồn tại mã học phần trước khi thêm
+        const exist = await db.collection('courses').where('code', '==', data.code).get();
+        if(!exist.empty) {
+          alert('Mã học phần đã tồn tại');
+          return;
+        }
+        await db.collection('courses').add(data);
+      }
+      formCourse.reset();
+      renderCourses();
+    } catch (err) {
+      alert('Lỗi lưu học phần: ' + err.message);
+    }
+  };
+
+  async function renderCourses() {
+    const keyword = searchCourses.value.trim().toLowerCase();
+    let snapshot = await db.collection('courses').orderBy('code').get();
+    let html = '';
+    snapshot.forEach(doc => {
+      const c = doc.data();
+      if (
+        c.code.toLowerCase().includes(keyword) ||
+        c.name.toLowerCase().includes(keyword)
+      ) {
+        html += `<tr>
+          <td>${c.code}</td>
+          <td>${c.name}</td>
+          <td>${c.credits}</td>
+          <td>${c.coefficient}</td>
+          <td>${c.hours}</td>
+          <td class="action-buttons">
+            <button onclick="editCourse('${doc.id}')">Sửa</button>
+            <button onclick="deleteCourse('${doc.id}')">Xóa</button>
+          </td>
+        </tr>`;
+      }
+    });
+    courseTable.innerHTML = html;
+    await populateCourseSelects();
+  }
+
+  function editCourse(id) {
+    db.collection('courses').doc(id).get().then(doc => {
+      if(!doc.exists) return alert('Không tìm thấy học phần');
+      const c = doc.data();
+      document.getElementById('courseCode').value = c.code;
+      document.getElementById('courseName').value = c.name;
+      document.getElementById('courseCredits').value = c.credits;
+      document.getElementById('courseCoefficient').value = c.coefficient;
+      document.getElementById('courseHours').value = c.hours;
+      editCourseId = id;
+      formCourse.querySelector('button').textContent = 'Cập nhật học phần';
+      showSection('courses');
+    });
+  }
+  function deleteCourse(id) {
+    if(confirm('Bạn chắc chắn muốn xóa học phần này?')) {
+      db.collection('courses').doc(id).delete().then(() => {
+        renderCourses();
+      });
+    }
+  }
+
+  // --- UC2.2: Kì học ---
+  const formSemester = document.getElementById('formSemester');
+  const semesterTable = document.getElementById('semesterTable');
+  const searchSemesters = document.getElementById('searchSemesters');
+
+  formSemester.onsubmit = async e => {
+    e.preventDefault();
+    const data = {
+      name: document.getElementById('semesterName').value.trim(),
+      schoolYear: document.getElementById('schoolYear').value.trim(),
+      startDate: document.getElementById('startDate').value,
+      endDate: document.getElementById('endDate').value,
+    };
+    if(!data.name || !data.schoolYear || !data.startDate || !data.endDate) {
+      alert('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    if(data.startDate > data.endDate) {
+      alert('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc');
+      return;
+    }
+    try {
+      if(editSemesterId) {
+        await db.collection('semesters').doc(editSemesterId).set(data);
+        editSemesterId = null;
+        formSemester.querySelector('button').textContent = 'Thêm kì học';
+      } else {
+        await db.collection('semesters').add(data);
+      }
+      formSemester.reset();
+      renderSemesters();
+      populateSemesterSelects();
+      populateStatYears();
+    } catch(err) {
+      alert('Lỗi lưu kì học: ' + err.message);
+    }
+  };
+
+  async function renderSemesters() {
+    const keyword = searchSemesters.value.trim().toLowerCase();
+    let snapshot = await db.collection('semesters').orderBy('schoolYear').get();
+    let html = '';
+    snapshot.forEach(doc => {
+      const s = doc.data();
+      if(
+        s.name.toLowerCase().includes(keyword) ||
+        s.schoolYear.toLowerCase().includes(keyword)
+      ) {
+        html += `<tr>
+          <td>${s.name}</td>
+          <td>${s.schoolYear}</td>
+          <td>${s.startDate}</td>
+          <td>${s.endDate}</td>
+          <td>
+            <button onclick="editSemester('${doc.id}')">Sửa</button>
+            <button onclick="deleteSemester('${doc.id}')">Xóa</button>
+          </td>
+        </tr>`;
+      }
+    });
+    semesterTable.innerHTML = html;
+    populateSemesterSelects();
+    populateStatYears();
+  }
+
+  function editSemester(id) {
+    db.collection('semesters').doc(id).get().then(doc => {
+      if(!doc.exists) return alert('Không tìm thấy kì học');
+      const s = doc.data();
+      document.getElementById('semesterName').value = s.name;
+      document.getElementById('schoolYear').value = s.schoolYear;
+      document.getElementById('startDate').value = s.startDate;
+      document.getElementById('endDate').value = s.endDate;
+      editSemesterId = id;
+      formSemester.querySelector('button').textContent = 'Cập nhật kì học';
+      showSection('semesters');
+    });
+  }
+  function deleteSemester(id) {
+    if(confirm('Bạn chắc chắn muốn xóa kì học này?')) {
+      db.collection('semesters').doc(id).delete().then(() => {
+        renderSemesters();
+        populateSemesterSelects();
+        populateStatYears();
+      });
+    }
+  }
+
+  // --- UC2.3: Lớp học phần ---
+  const formClass = document.getElementById('formClass');
+  const classTable = document.getElementById('classTable');
+  const searchClasses = document.getElementById('searchClasses');
+  const selectSemester = document.getElementById('classSemester');
+  const selectCourse = document.getElementById('classCourse');
+
+  formClass.onsubmit = async e => {
+    e.preventDefault();
+    const data = {
+      semesterId: selectSemester.value,
+      courseId: selectCourse.value,
+      classCode: document.getElementById('classCode').value.trim(),
+      className: document.getElementById('className').value.trim(),
+      studentCount: Number(document.getElementById('classStudentCount').value),
+    };
+    if(!data.semesterId || !data.courseId || !data.classCode || !data.className) {
+      alert('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    try {
+      if(editClassId) {
+        await db.collection('classes').doc(editClassId).set(data);
+        editClassId = null;
+        formClass.querySelector('button').textContent = 'Thêm lớp học phần';
+      } else {
+        // Kiểm tra mã lớp học phần
+        const exist = await db.collection('classes').where('classCode', '==', data.classCode).get();
+        if(!exist.empty) {
+          alert('Mã lớp học phần đã tồn tại');
+          return;
+        }
+        await db.collection('classes').add(data);
+      }
+      formClass.reset();
+      renderClasses();
+    } catch(err) {
+      alert('Lỗi lưu lớp học phần: ' + err.message);
+    }
+  };
+
+  async function renderClasses() {
+    const keyword = searchClasses.value.trim().toLowerCase();
+    const semestersSnap = await db.collection('semesters').get();
+    const coursesSnap = await db.collection('courses').get();
+
+    // Tạo maps để tra cứu tên
+    const semesters = {};
+    semestersSnap.forEach(doc => semesters[doc.id] = doc.data());
+    const courses = {};
+    coursesSnap.forEach(doc => courses[doc.id] = doc.data());
+
+    let snapshot = await db.collection('classes').orderBy('classCode').get();
+    let html = '';
+    snapshot.forEach(doc => {
+      const c = doc.data();
+      const sem = semesters[c.semesterId] || {};
+      const course = courses[c.courseId] || {};
+      if (
+        c.classCode.toLowerCase().includes(keyword) ||
+        c.className.toLowerCase().includes(keyword)
+      ) {
+        html += `<tr>
+          <td>${sem.name || '---'}</td>
+          <td>${course.name || '---'}</td>
+          <td>${c.classCode}</td>
+          <td>${c.className}</td>
+          <td>${c.studentCount}</td>
+          <td>
+            <button onclick="editClass('${doc.id}')">Sửa</button>
+            <button onclick="deleteClass('${doc.id}')">Xóa</button>
+          </td>
+        </tr>`;
+      }
+    });
+    classTable.innerHTML = html;
+  }
+
+  function editClass(id) {
+    db.collection('classes').doc(id).get().then(doc => {
+      if(!doc.exists) return alert('Không tìm thấy lớp học phần');
+      const c = doc.data();
+      selectSemester.value = c.semesterId;
+      selectCourse.value = c.courseId;
+      document.getElementById('classCode').value = c.classCode;
+      document.getElementById('className').value = c.className;
+      document.getElementById('classStudentCount').value = c.studentCount;
+      editClassId = id;
+      formClass.querySelector('button').textContent = 'Cập nhật lớp học phần';
+      showSection('classes');
+    });
+  }
+  function deleteClass(id) {
+    if(confirm('Bạn chắc chắn muốn xóa lớp học phần này?')) {
+      db.collection('classes').doc(id).delete().then(() => {
+        renderClasses();
+      });
+    }
+  }
+
+  // Populate semester and course selects for classes form
+  async function populateSemesterSelects() {
+    const snap = await db.collection('semesters').orderBy('schoolYear').get();
+    const html = ['<option value="">-- Chọn Kì học --</option>'];
+    snap.forEach(doc => {
+      const s = doc.data();
+      html.push(`<option value="${doc.id}">${s.name} (${s.schoolYear})</option>`);
+    });
+    selectSemester.innerHTML = html.join('');
+  }
+  async function populateCourseSelects() {
+    const snap = await db.collection('courses').orderBy('code').get();
+    const html = ['<option value="">-- Chọn Học phần --</option>'];
+    snap.forEach(doc => {
+      const c = doc.data();
+      html.push(`<option value="${doc.id}">${c.code} - ${c.name}</option>`);
+    });
+    selectCourse.innerHTML = html.join('');
+  }
+
+  // --- UC2.4: Phân công giảng viên ---
+  // Giả sử bạn đã có collection "teachers" trong Firestore tương tự, mình viết demo tương tác
+  const formAssignment = document.getElementById('formAssignment');
+  const assignmentTable = document.getElementById('assignmentTable');
+  const searchAssignments = document.getElementById('searchAssignments');
+  const selectAssignClass = document.getElementById('assignClass');
+  const selectAssignTeacher = document.getElementById('assignTeacher');
+
+  formAssignment.onsubmit = async e => {
+    e.preventDefault();
+    const data = {
+      classId: selectAssignClass.value,
+      teacherId: selectAssignTeacher.value,
+    };
+    if(!data.classId || !data.teacherId) {
+      alert('Vui lòng chọn lớp và giảng viên');
+      return;
+    }
+    try {
+      // Kiểm tra phân công trùng lặp
+      const exist = await db.collection('assignments')
+        .where('classId', '==', data.classId)
+        .where('teacherId', '==', data.teacherId)
+        .get();
+      if(!exist.empty) {
+        alert('Phân công này đã tồn tại');
+        return;
+      }
+      await db.collection('assignments').add(data);
+      formAssignment.reset();
+      renderAssignments();
+    } catch(err) {
+      alert('Lỗi lưu phân công: ' + err.message);
+    }
+  };
+
+  async function renderAssignments() {
+    const keyword = searchAssignments.value.trim().toLowerCase();
+    const classesSnap = await db.collection('classes').get();
+    const teachersSnap = await db.collection('teachers').get();
+
+    const classes = {};
+    classesSnap.forEach(doc => classes[doc.id] = doc.data());
+    const teachers = {};
+    teachersSnap.forEach(doc => teachers[doc.id] = doc.data());
+
+    let snap = await db.collection('assignments').get();
+    let html = '';
+    snap.forEach(doc => {
+      const a = doc.data();
+      const cl = classes[a.classId] || {};
+      const teacher = teachers[a.teacherId] || {};
+      if (
+        (cl.classCode && cl.classCode.toLowerCase().includes(keyword)) ||
+        (teacher.teacherCode && teacher.teacherCode.toLowerCase().includes(keyword)) ||
+        (teacher.name && teacher.name.toLowerCase().includes(keyword))
+      ) {
+        html += `<tr>
+          <td>${cl.classCode || '---'}</td>
+          <td>${cl.className || '---'}</td>
+          <td>${teacher.teacherCode || '---'}</td>
+          <td>${teacher.name || '---'}</td>
+          <td>
+            <button onclick="deleteAssignment('${doc.id}')">Xóa</button>
+          </td>
+        </tr>`;
+      }
+    });
+    assignmentTable.innerHTML = html;
+  }
+
+  function deleteAssignment(id) {
+    if(confirm('Bạn chắc chắn muốn xóa phân công này?')) {
+      db.collection('assignments').doc(id).delete().then(() => {
+        renderAssignments();
+      });
+    }
+  }
+
+  // Populate selects for assignments
+  async function populateAssignClassSelect() {
+    const snap = await db.collection('classes').orderBy('classCode').get();
+    const html = ['<option value="">-- Chọn Lớp học phần --</option>'];
+    snap.forEach(doc => {
+      const c = doc.data();
+      html.push(`<option value="${doc.id}">${c.classCode} - ${c.className}</option>`);
+    });
+    selectAssignClass.innerHTML = html.join('');
+  }
+  async function populateAssignTeacherSelect() {
+    const snap = await db.collection('teachers').orderBy('teacherCode').get();
+    const html = ['<option value="">-- Chọn Giảng viên --</option>'];
+    snap.forEach(doc => {
+      const t = doc.data();
+      html.push(`<option value="${doc.id}">${t.teacherCode} - ${t.name}</option>`);
+    });
+    selectAssignTeacher.innerHTML = html.join('');
+  }
+
+  // --- UC2.5: Thống kê ---
+  const statYearSelect = document.getElementById('statYear');
+  const statTable = document.getElementById('statTable');
+
+  async function populateStatYears() {
+    let snap = await db.collection('semesters').get();
+    const yearsSet = new Set();
+    snap.forEach(doc => {
+      const s = doc.data();
+      if(s.schoolYear) yearsSet.add(s.schoolYear);
+    });
+    const years = Array.from(yearsSet).sort();
+    const html = ['<option value="">-- Chọn năm học --</option>'];
+    years.forEach(y => html.push(`<option value="${y}">${y}</option>`));
+    statYearSelect.innerHTML = html.join('');
+  }
+
+  async function renderStats() {
+    const year = statYearSelect.value;
+    if(!year) {
+      statTable.innerHTML = '';
+      return;
+    }
+    // Lấy các lớp học phần trong năm học đó
+    const semestersSnap = await db.collection('semesters')
+      .where('schoolYear', '==', year).get();
+    const semesterIds = semestersSnap.docs.map(d => d.id);
+
+    if(semesterIds.length === 0) {
+      statTable.innerHTML = '<tr><td colspan="3">Không có dữ liệu</td></tr>';
+      return;
+    }
+
+    // Lấy học phần
+    const coursesSnap = await db.collection('courses').get();
+    const courses = {};
+    coursesSnap.forEach(d => courses[d.id] = d.data());
+
+    // Lấy lớp học phần của các kì học trong năm học đó
+    const classesSnap = await db.collection('classes').where('semesterId', 'in', semesterIds).get();
+
+    // Đếm số lớp mở cho từng học phần
+    const countByCourseId = {};
+    classesSnap.forEach(d => {
+      const c = d.data();
+      countByCourseId[c.courseId] = (countByCourseId[c.courseId] || 0) + 1;
+    });
+
+    let html = '';
+    for(const courseId in countByCourseId) {
+      const c = courses[courseId] || {};
+      html += `<tr>
+        <td>${year}</td>
+        <td>${c.name || '---'}</td>
+        <td>${countByCourseId[courseId]}</td>
+      </tr>`;
+    }
+    statTable.innerHTML = html || '<tr><td colspan="3">Không có dữ liệu</td></tr>';
+  }
+
+  // Khởi tạo load dữ liệu và selects
+  async function init() {
+    await renderCourses();
+    await renderSem
+    esters();
+await renderClasses();
+await renderAssignments();
+await populateCourseSelects();
+await populateSemesterSelects();
+await populateAssignClassSelect();
+await populateAssignTeacherSelect();
+await populateStatYears();
+}
+init();
+
+</script> 
+</body> 
+</html>
